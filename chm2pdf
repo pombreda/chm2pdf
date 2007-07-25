@@ -1,0 +1,97 @@
+#!/usr/bin/env python
+'''
+CHM2PDF
+
+A script that converts a CHM compiled HTML file into a single PDF file.
+(c) Massimo Sandal, 2007
+
+Released under the GNU GPL version 2 or later.
+'''
+
+import chm.chm as chm
+import sys
+import sgmllib
+import os
+
+class PageLister(sgmllib.SGMLParser):
+    '''
+    parser of the chm.chm GetTopicsTree() method that retrieves the URL of the HTML
+    page embedded in the CHM file.
+    '''
+    def reset(self):
+        sgmllib.SGMLParser.reset(self)
+        self.pages=[]
+        
+    def start_param(self,attrs):
+       urlparam_flag=False
+       for key,value in attrs:
+           if key=='name' and value=='Local':
+               urlparam_flag=True
+           if urlparam_flag and key=='value':
+               self.pages.append('/'+value)  
+               
+def get_html_list(cfile):
+    '''
+    retrieves the list of HTML files contained into the CHM file, in order.
+    (actually performed by the PageLister class)
+    '''
+    topicstree=cfile.GetTopicsTree()
+    lister=PageLister()
+    lister.feed(topicstree)
+    return lister.pages
+
+
+def convert_to_pdf(cfile, outputfilename):
+    
+    html_list=get_html_list(cfile)
+    TEMP_DIR='temp'
+    
+    try:
+        os.mkdir(TEMP_DIR)
+    except OSError: #there is already the directory
+        pass
+    os.chdir(TEMP_DIR)
+    
+    c=0
+    print 'Converting individual HTML pages in PDF...'
+    for url in html_list:
+        c+=1
+        ui=cfile.ResolveObject(url)[1]
+        page=cfile.RetrieveObject(ui)[1]
+        
+        f=open('temp.html','w')
+        f.write(page)
+        f.close
+        
+        #guarantee that the file has been wholly written
+        f=open('temp.html','r')
+        while len(f.read()) < len(page):
+            pass
+        f.close()
+        
+        #convert each html page with htmldoc
+        os.system ("htmldoc -t pdf --size 'A4' --webpage 'temp.html' -f "+'%(#)04d' %{"#":c}+".pdf > /dev/null")
+        
+        #os.remove('temp.ps')
+        os.remove('temp.html')
+        
+    print 'Concatenating '+str(c)+' individual PDF files...'
+    os.system("pdftk *.pdf cat output ../"+outputfilename)
+    print 'Removing temporary files'
+    os.system("rm *.pdf")
+    os.chdir('..')
+    os.rmdir('temp')
+    print 'Done.'
+        
+def main(argv):
+    filename = argv[1]
+    outputfilename = argv[2]
+ 
+    cfile = chm.CHMFile()
+    cfile.LoadCHM(filename)
+    convert_to_pdf(cfile, outputfilename)
+
+
+if __name__ == '__main__':
+    main(sys.argv)
+    

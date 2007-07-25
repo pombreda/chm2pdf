@@ -1,0 +1,15 @@
+CHM2PDF
+
+(c)Massimo Sandal 2007.
+
+A Python script that converts a CHM file into a single PDF file.
+
+Requires:
+    - chmlib
+    - pychm
+    - htmldoc
+    - pdftk
+    
+All of these should be in your Linux/Unix distribution repository :)
+
+To contact me: devicerandom@gmail.com
