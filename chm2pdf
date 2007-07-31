@@ -82,10 +82,20 @@ def convert_to_pdf(cfile, outputfilename):
     os.chdir('..')
     os.rmdir('temp')
     print 'Done.'
-        
+    
+def help():
+    print 'Usage: chm2pdf [input filename] [output filename]'
+
 def main(argv):
-    filename = argv[1]
-    outputfilename = argv[2]
+    if len(argv)==1:
+        help()
+        return
+    elif len(argv)==2:
+        filename = argv[1]
+        outputfilename = argv[1]+'.pdf'
+    else:
+        filename = argv[1]
+        outputfilename = argv[2]
  
     cfile = chm.CHMFile()
     cfile.LoadCHM(filename)
