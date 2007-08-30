@@ -12,6 +12,7 @@ import chm.chm as chm
 import sys
 import sgmllib
 import os
+import re, glob
 
 class PageLister(sgmllib.SGMLParser):
     '''
@@ -29,7 +30,21 @@ class PageLister(sgmllib.SGMLParser):
                urlparam_flag=True
            if urlparam_flag and key=='value':
                self.pages.append('/'+value)  
-               
+     
+class ImageCatcher(sgmllib.SGMLParser):
+    '''
+    finds image urls in the current html page, so to take them out from the chm file.
+    '''
+    def reset(self):
+        sgmllib.SGMLParser.reset(self)
+        self.imgurls=[]
+        
+    def start_img(self,attrs):
+        for key,value in attrs:
+            if key=='src':
+                self.imgurls.append(value)
+     
+
 def get_html_list(cfile):
     '''
     retrieves the list of HTML files contained into the CHM file, in order.
@@ -40,11 +55,15 @@ def get_html_list(cfile):
     lister.feed(topicstree)
     return lister.pages
 
-
 def convert_to_pdf(cfile, outputfilename):
     
+    TEMP_DIR='temp' #where conversions etc. take place
+    TEMP_OUT='tempout' #where the chm file is exploded
+    
     html_list=get_html_list(cfile)
-    TEMP_DIR='temp'
+    #the dir where the things are located in the 'exploded' directory.
+    #I've been unable to find a better way to find it, nor I know if it holds for all chm files.
+    unique_dir=cfile.home.split('/')[1] 
     
     try:
         os.mkdir(TEMP_DIR)
@@ -56,14 +75,25 @@ def convert_to_pdf(cfile, outputfilename):
     print 'Converting individual HTML pages in PDF...'
     for url in html_list:
         c+=1
-        ui=cfile.ResolveObject(url)[1]
-        page=cfile.RetrieveObject(ui)[1]
+        page_filename='../'+TEMP_OUT+'/'+url
         
+        pf=open(page_filename,'r')
+        page=pf.read()
+        pf.close()
+        
+        #give the correct image links to the html file
+        image_catcher=ImageCatcher()
+        image_catcher.feed(page)
+        
+        for iurl in image_catcher.imgurls:            
+            img_filename='../'+TEMP_OUT+'/'+unique_dir+'/'+iurl
+            #substitute the new image filenames
+            page=re.sub(iurl,img_filename,page)
+            
         f=open('temp.html','w')
         f.write(page)
         f.close
-        
-        #guarantee that the file has been wholly written
+        #hack to guarantee that the file has been wholly written
         f=open('temp.html','r')
         while len(f.read()) < len(page):
             pass
@@ -71,16 +101,20 @@ def convert_to_pdf(cfile, outputfilename):
         
         #convert each html page with htmldoc
         os.system ("htmldoc -t pdf --size 'A4' --webpage 'temp.html' -f "+'%(#)04d' %{"#":c}+".pdf > /dev/null")
-        
-        #os.remove('temp.ps')
         os.remove('temp.html')
         
+    
+    #concatenation
     print 'Concatenating '+str(c)+' individual PDF files...'
     os.system("pdftk *.pdf cat output ../"+outputfilename)
+    
+    #remove temporary files
     print 'Removing temporary files'
     os.system("rm *.pdf")
     os.chdir('..')
-    os.rmdir('temp')
+    os.rmdir(TEMP_DIR)
+    os.system('rm -r '+TEMP_OUT)
+    
     print 'Done.'
     
 def help():
@@ -99,6 +133,7 @@ def main(argv):
  
     cfile = chm.CHMFile()
     cfile.LoadCHM(filename)
+    os.system('extract_chmLib ' + filename +' '+TEMP_OUT)
     convert_to_pdf(cfile, outputfilename)
 
 
