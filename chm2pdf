@@ -11,7 +11,7 @@ Released under the GNU GPL version 2 or later.
 import chm.chm as chm
 import sys
 import sgmllib
-import os
+import os, os.path
 import re, glob
 
 global TEMP_DIR #where conversions etc. take place
@@ -111,11 +111,12 @@ def convert_to_pdf(cfile, filename, outputfilename):
         image_catcher=ImageCatcher()
         image_catcher.feed(page)
         
+        #We substitute the image URLs of the html files with the *actual* URLs on the temp directory
         for iurl in image_catcher.imgurls:            
             for item in objective_urls:
                 if iurl in item:
                     img_filename='../'+TEMP_OUT+item
-                    if ';' in img_filename: #hack to get rid of ; in filenames and urls...
+                    if ';' in img_filename: #hack to get rid of mysterious ; in filenames and urls...
                         img_filename=img_filename.split(';')[0]
             #substitute the new image filenames
             page=re.sub(iurl,img_filename,page)
@@ -161,6 +162,10 @@ def main(argv):
         filename = argv[1]
         outputfilename = argv[2]
  
+    if not os.path.exists(filename):
+        print 'File not found!'
+        return
+    
     cfile = chm.CHMFile()
     cfile.LoadCHM(filename)
     os.system('extract_chmLib ' + filename +' '+TEMP_OUT)
