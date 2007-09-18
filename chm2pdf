@@ -14,6 +14,13 @@ import sgmllib
 import os
 import re, glob
 
+global TEMP_DIR #where conversions etc. take place
+global TEMP_OUT #where the chm file is exploded
+global filename #the input filename
+
+TEMP_DIR='temp' 
+TEMP_OUT='tempout'
+
 class PageLister(sgmllib.SGMLParser):
     '''
     parser of the chm.chm GetTopicsTree() method that retrieves the URL of the HTML
@@ -44,33 +51,52 @@ class ImageCatcher(sgmllib.SGMLParser):
             if key=='src':
                 self.imgurls.append(value)
      
-
 def get_html_list(cfile):
     '''
-    retrieves the list of HTML files contained into the CHM file, in order.
+    retrieves the list of HTML files contained into the CHM file, **in order** (that's the important bit).
     (actually performed by the PageLister class)
     '''
     topicstree=cfile.GetTopicsTree()
     lister=PageLister()
     lister.feed(topicstree)
+    #print 'lister pages',lister.pages
     return lister.pages
 
-def convert_to_pdf(cfile, outputfilename):
+def get_objective_urls_list(filename):
+    '''
+    takes the list of files inside the chm archive, with the correct urls of each one.
+    '''
+    os.system('enum_chmLib '+filename+' > '+TEMP_DIR+'/urlslist.txt')
+    flist=open(TEMP_DIR+'/urlslist.txt','r')
+    urls_list=[]
+    for line in flist.readlines()[3:]:
+        #print 'line',line
+        spline=line.split()
+        urls_list.append(spline[5])
+    flist.close()
+    os.remove(TEMP_DIR+'/urlslist.txt')
     
-    TEMP_DIR='temp' #where conversions etc. take place
-    TEMP_OUT='tempout' #where the chm file is exploded
-    
-    html_list=get_html_list(cfile)
-    #the dir where the things are located in the 'exploded' directory.
-    #I've been unable to find a better way to find it, nor I know if it holds for all chm files.
-    unique_dir=cfile.home.split('/')[1] 
-    
+    return urls_list
+
+def convert_to_pdf(cfile, filename, outputfilename):
+    '''
+    Performs actual converting.
+    '''
     try:
         os.mkdir(TEMP_DIR)
     except OSError: #there is already the directory
         pass
-    os.chdir(TEMP_DIR)
     
+    html_list=get_html_list(cfile)
+    objective_urls=get_objective_urls_list(filename)
+    true_html_list=[] #Should mostly coincide with html_list, but...
+    
+    for html_file in html_list:
+        for item in objective_urls:
+            if html_file in item:
+                true_html_list.append(TEMP_OUT+item)
+    
+    os.chdir(TEMP_DIR)
     c=0
     print 'Converting individual HTML pages in PDF...'
     for url in html_list:
@@ -86,7 +112,11 @@ def convert_to_pdf(cfile, outputfilename):
         image_catcher.feed(page)
         
         for iurl in image_catcher.imgurls:            
-            img_filename='../'+TEMP_OUT+'/'+unique_dir+'/'+iurl
+            for item in objective_urls:
+                if iurl in item:
+                    img_filename='../'+TEMP_OUT+item
+                    if ';' in img_filename: #hack to get rid of ; in filenames and urls...
+                        img_filename=img_filename.split(';')[0]
             #substitute the new image filenames
             page=re.sub(iurl,img_filename,page)
             
@@ -134,7 +164,7 @@ def main(argv):
     cfile = chm.CHMFile()
     cfile.LoadCHM(filename)
     os.system('extract_chmLib ' + filename +' '+TEMP_OUT)
-    convert_to_pdf(cfile, outputfilename)
+    convert_to_pdf(cfile, filename, outputfilename)
 
 
 if __name__ == '__main__':
