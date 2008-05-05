@@ -416,9 +416,14 @@ def convert_to_pdf(cfile, filename, outputfilename, options):
             elif key=='webpage': htmldoc_opts += ' ' + value
            
     print 'htmldoc' + htmldoc_opts + ' ' + htmlout_filename_list + " -f "+ outputfilename + " > /dev/null"
-    os.system ('htmldoc' + htmldoc_opts + ' ' + htmlout_filename_list + " -f "+ outputfilename + " > /dev/null")
+    exit_value=os.system ('htmldoc' + htmldoc_opts + ' ' + htmlout_filename_list + " -f "+ outputfilename + " > /dev/null")
 
-    print 'Written file ' + outputfilename
+    if exit_value != 0:
+        print 'Something wrong happened when launching htmldoc.'
+        print 'exit value: ',exit_value
+        print 'Check if output exists or if it is good.'
+    else:
+        print 'Written file ' + outputfilename
     print 'Done.'
     
 
