@@ -143,14 +143,8 @@ def correct_file(input_file, output_file, html_list, objective_urls):
 
     f=open(output_file,'w')
     f.write(page)
-    f.close
-    #hack to guarantee that the file has been wholly written
-    f=open(output_file,'r')
-    while len(f.read()) < len(page):
-        pass
     f.close()
-
-
+    
 def convert_to_pdf(cfile, filename, outputfilename, options):
     '''
     Performs actual converting.
