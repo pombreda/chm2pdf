@@ -1,7 +1,7 @@
 CHM2PDF
 
 (c) 2007 Massimo Sandal
-(c) 2007 Chris Karakas <http://www.karakas-online.de>
+(c) 2007-2008 Chris Karakas <http://www.karakas-online.de>
 
 A Python script that converts a CHM file into a single PDF file.
 
@@ -13,6 +13,11 @@ See
 chm2pdf --help
 
 for all options.
+
+RECOMMENDED READING:
+    - http://www.karakas-online.de/forum/viewtopic.php?t=10275
+    - http://www.karakas-online.de/forum/viewtopic.php?t=10969
+
 
 Installation:
 - download the .tar.gz
@@ -27,6 +32,9 @@ Requires:
       NOTE: chmlib *must* be configured with ./configure --enable-examples
     - pychm
     - htmldoc
+
+Optional:
+    - BeautifulSoup
     
 All of these should be in your Linux/Unix distribution repository :)
 
